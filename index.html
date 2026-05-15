@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食品安全溯源查询系统</title>
+    <style>
+        /* 基础样式 */
+        :root {
+            --primary-color: #059669; /* 森林绿 */
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+        }
+
+        /* 顶部导航 */
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+            border-radius: 0 0 24px 24px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            margin: 8px 0 0;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* 容器 */
+        .container {
+            max-width: 600px;
+            margin: -20px auto 40px;
+            padding: 0 15px;
+        }
+
+        /* 内容卡片 */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
+            padding-left: 10px;
+            margin-bottom: 15px;
+            margin-top: 25px;
+        }
+
+        .section-title:first-of-type { margin-top: 0; }
+
+        /* 状态标签 */
+        .status-badge {
+            display: inline-block;
+            background: #dcfce7;
+            color: #15803d;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        /* 信息条目 */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .info-label { color: var(--text-sub); font-size: 0.95rem; }
+        .info-value { font-weight: 500; text-align: right; }
+
+        /* 物流时间轴 [cite: 28] */
+        .timeline {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 25px;
+            padding-bottom: 15px;
+            border-left: 2px solid #e5e7eb;
+        }
+
+        .timeline-item::before {
+            content: "";
+            position: absolute;
+            left: -7px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            background: var(--primary-color);
+            border-radius: 50%;
+        }
+
+        .timeline-item:last-child {
+            border-left: none;
+            padding-bottom: 0;
+        }
+
+        /* 结论提示 */
+        .conclusion-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            padding: 15px;
+            border-radius: 12px;
+            color: #166534;
+            font-size: 0.9rem;
+        }
+
+        /* 错误提示 */
+        .error-msg {
+            text-align: center;
+            padding: 40px 20px;
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>食品安全溯源系统</h1>
+    <p>—— 每一口都吃得放心 ——</p>
+</div>
+
+<div class="container">
+    <div id="app">
+        <div class="card" style="text-align: center;">正在调取区块链溯源数据...</div>
+    </div>
+</div>
+
+<script>
+    // 获取 URL 中的 id 参数 [cite: 53]
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('id');
+    const app = document.getElementById('app');
+
+    async function loadProductData() {
+        if (!productId) {
+            app.innerHTML = `<div class="card error-msg">
+                <h3>未检测到产品编号</h3>
+                <p>请扫描包装上的有效二维码进行访问。</p>
+            </div>`;
+            return;
+        }
+
+        try {
+            // 获取 products.json 数据 [cite: 53]
+            const response = await fetch('products.json');
+            if (!response.ok) throw new Error('无法加载数据文件');
+            
+            const products = await response.json();
+            // 查找对应 ID 的产品信息 [cite: 53]
+            const product = products.find(p => p.id === productId);
+
+            if (!product) {
+                app.innerHTML = `<div class="card error-msg">
+                    <h3>查询失败</h3>
+                    <p>未找到编号为 [${productId}] 的产品溯源信息，请核实产品真伪。</p>
+                </div>`;
+                return;
+            }
+
+            // 动态渲染页面内容 [cite: 53]
+            app.innerHTML = `
+                <div class="card">
+                    <div class="status-badge">验证通过：${product.testResult}</div>
+                    <h2 style="margin-top:0">${product.name}</h2>
+                    
+                    <div class="section-title">产品基本信息</div>
+                    <div class="info-row"><span class="info-label">产品编号</span><span class="info-value">${product.id}</span></div>
+                    <div class="info-row"><span class="info-label">生产批次</span><span class="info-value">${product.batch}</span></div>
+                    <div class="info-row"><span class="info-label">原产地</span><span class="info-value">${product.origin}</span></div>
+                    <div class="info-row"><span class="info-label">生产日期</span><span class="info-value">${product.date}</span></div>
+                    <div class="info-row"><span class="info-label">保质期</span><span class="info-value">${product.shelfLife}</span></div>
+                    <div class="info-row"><span class="info-label">生产企业</span><span class="info-value">${product.producer}</span></div>
+
+                    <div class="section-title">检测评估报告</div>
+                    <div class="info-row"><span class="info-label">检测机构</span><span class="info-value">${product.testOrg}</span></div>
+                    <div class="info-row"><span class="info-label">检测结论</span><span class="info-value" style="color:#15803d">${product.testResult}</span></div>
+
+                    <div class="section-title">全程物流追踪</div>
+                    <div class="timeline">
+                        ${product.logistics.map(item => `<li class="timeline-item">${item}</li>`).join('')}
+                    </div>
+
+                    <div class="section-title">溯源结论</div>
+                    <div class="conclusion-box">
+                        ${product.conclusion}
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            app.innerHTML = `<div class="card error-msg">
+                <h3>系统错误</h3>
+                <p>数据加载失败，请检查 products.json 文件是否在根目录。</p>
+            </div>`;
+        }
+    }
+
+    // 执行加载
+    loadProductData();
+</script>
+
+</body>
+</html>
